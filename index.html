@@ -18,65 +18,72 @@
         .container {
             background-color: white;
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             text-align: center;
             max-width: 400px;
             width: 100%;
         }
         h2 {
             color: #333;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         .controls {
             margin-bottom: 20px;
         }
+        
+        /* Giao diện nút bấm mặc định (Màu xanh) */
         button {
-            padding: 10px 20px;
+            padding: 12px 28px;
             font-size: 16px;
+            font-weight: bold;
             border: none;
-            border-radius: 5px;
+            border-radius: 50px;
             cursor: pointer;
-            margin: 0 5px;
-            transition: background-color 0.3s;
-        }
-        #recordBtn {
-            background-color: #28a745;
             color: white;
+            background-color: #28a745; 
+            box-shadow: 0 4px 6px rgba(40, 167, 69, 0.3);
+            transition: all 0.3s ease;
+            outline: none;
         }
-        #recordBtn:disabled {
-            background-color: #a8d5b4;
-            cursor: not-allowed;
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(40, 167, 69, 0.4);
         }
-        #stopBtn {
+        
+        button:active {
+            transform: translateY(1px);
+        }
+
+        /* Trạng thái khi đang ghi âm (Màu đỏ + Hiệu ứng nhấp nháy) */
+        button.recording {
             background-color: #dc3545;
-            color: white;
+            box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3);
+            animation: pulse 1.5s infinite;
         }
-        #stopBtn:disabled {
-            background-color: #f0a8ae;
-            cursor: not-allowed;
+        
+        button.recording:hover {
+            box-shadow: 0 6px 8px rgba(220, 53, 69, 0.4);
         }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.6); }
+            70% { box-shadow: 0 0 0 12px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
         audio {
             width: 100%;
-            margin-top: 15px;
+            margin-top: 20px;
             outline: none;
         }
         .status {
-            margin-top: 10px;
-            font-size: 14px;
+            margin-top: 15px;
+            font-size: 15px;
             color: #666;
             height: 20px;
-        }
-        .recording-indicator {
-            color: #dc3545;
-            font-weight: bold;
-            animation: blink 1s infinite;
-            display: none;
-        }
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0; }
-            100% { opacity: 1; }
+            transition: color 0.3s;
         }
     </style>
 </head>
@@ -85,13 +92,9 @@
 <div class="container">
     <h2>Trạm Ghi Âm</h2>
     <div class="controls">
-        <button id="recordBtn">Bắt đầu ghi âm</button>
-        <button id="stopBtn" disabled>Dừng</button>
+        <button id="recordToggleBtn">Bắt đầu ghi âm</button>
     </div>
-    <div class="status">
-        <span id="statusText">Sẵn sàng...</span>
-        <span id="recordingIndicator" class="recording-indicator">⏺ Đang ghi âm...</span>
-    </div>
+    <div class="status" id="statusText">Sẵn sàng...</div>
     
     <audio id="audioPlayback" controls></audio>
 </div>
@@ -99,61 +102,62 @@
 <script>
     let mediaRecorder;
     let audioChunks = [];
+    let isRecording = false; // Biến kiểm tra trạng thái
+    let stream;
 
-    const recordBtn = document.getElementById('recordBtn');
-    const stopBtn = document.getElementById('stopBtn');
+    const recordToggleBtn = document.getElementById('recordToggleBtn');
     const audioPlayback = document.getElementById('audioPlayback');
     const statusText = document.getElementById('statusText');
-    const recordingIndicator = document.getElementById('recordingIndicator');
 
-    recordBtn.addEventListener('click', async () => {
-        try {
-            // Yêu cầu quyền truy cập Micro
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+    recordToggleBtn.addEventListener('click', async () => {
+        if (!isRecording) {
+            // --- BƯỚC 1: BẮT ĐẦU GHI ÂM ---
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = []; // Xóa dữ liệu cũ
 
-            mediaRecorder.ondataavailable = event => {
-                if (event.data.size > 0) {
-                    audioChunks.push(event.data);
-                }
-            };
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
 
-            mediaRecorder.onstop = () => {
-                // Gộp các phần dữ liệu âm thanh lại và tạo đường dẫn tạm thời (Blob URL)
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const audioUrl = URL.createObjectURL(audioBlob);
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    audioPlayback.src = audioUrl;
+                    
+                    // Tắt hẳn micro để tiết kiệm pin và tắt đèn đỏ trình duyệt
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
                 
-                // Gắn vào thẻ audio để phát lại
-                audioPlayback.src = audioUrl;
-                audioChunks = []; // Làm sạch mảng để chuẩn bị cho lần ghi âm tiếp theo
-                
-                // Dừng tất cả các track của micro để tắt đèn đỏ trên trình duyệt
-                stream.getTracks().forEach(track => track.stop());
-            };
+                // Đổi giao diện nút sang "Dừng"
+                recordToggleBtn.textContent = 'Dừng ghi âm';
+                recordToggleBtn.classList.add('recording');
+                statusText.textContent = '⏺ Đang ghi âm...';
+                statusText.style.color = '#dc3545';
+                statusText.style.fontWeight = 'bold';
 
-            mediaRecorder.start();
+            } catch (err) {
+                console.error('Lỗi truy cập micro:', err);
+                alert('Không thể truy cập micro. Vui lòng kiểm tra quyền của trình duyệt!');
+            }
+        } else {
+            // --- BƯỚC 2: DỪNG GHI ÂM ---
+            mediaRecorder.stop();
+            isRecording = false;
             
-            // Cập nhật giao diện
-            recordBtn.disabled = true;
-            stopBtn.disabled = false;
-            statusText.style.display = 'none';
-            recordingIndicator.style.display = 'inline';
-
-        } catch (err) {
-            console.error('Lỗi truy cập micro:', err);
-            alert('Không thể truy cập micro. Vui lòng kiểm tra quyền truy cập của trình duyệt!');
+            // Trả giao diện nút về "Bắt đầu"
+            recordToggleBtn.textContent = 'Bắt đầu ghi âm';
+            recordToggleBtn.classList.remove('recording');
+            statusText.textContent = 'Đã lưu bản ghi. Bạn có thể nghe lại bên dưới!';
+            statusText.style.color = '#28a745';
+            statusText.style.fontWeight = 'normal';
         }
-    });
-
-    stopBtn.addEventListener('click', () => {
-        mediaRecorder.stop();
-        
-        // Cập nhật giao diện
-        recordBtn.disabled = false;
-        stopBtn.disabled = true;
-        statusText.style.display = 'inline';
-        statusText.textContent = 'Đã lưu bản ghi tạm thời.';
-        recordingIndicator.style.display = 'none';
     });
 </script>
 
