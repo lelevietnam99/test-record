@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ghi-am-v1';
+const CACHE_NAME = 'ghi-am-v2';
 const urlsToCache = [
   './',
   './index.html',
