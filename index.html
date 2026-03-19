@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Máy Ghi Âm Tạm Thời</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+            margin: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: background-color 0.3s;
+        }
+        #recordBtn {
+            background-color: #28a745;
+            color: white;
+        }
+        #recordBtn:disabled {
+            background-color: #a8d5b4;
+            cursor: not-allowed;
+        }
+        #stopBtn {
+            background-color: #dc3545;
+            color: white;
+        }
+        #stopBtn:disabled {
+            background-color: #f0a8ae;
+            cursor: not-allowed;
+        }
+        audio {
+            width: 100%;
+            margin-top: 15px;
+            outline: none;
+        }
+        .status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            height: 20px;
+        }
+        .recording-indicator {
+            color: #dc3545;
+            font-weight: bold;
+            animation: blink 1s infinite;
+            display: none;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Trạm Ghi Âm</h2>
+    <div class="controls">
+        <button id="recordBtn">Bắt đầu ghi âm</button>
+        <button id="stopBtn" disabled>Dừng</button>
+    </div>
+    <div class="status">
+        <span id="statusText">Sẵn sàng...</span>
+        <span id="recordingIndicator" class="recording-indicator">⏺ Đang ghi âm...</span>
+    </div>
+    
+    <audio id="audioPlayback" controls></audio>
+</div>
+
+<script>
+    let mediaRecorder;
+    let audioChunks = [];
+
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const audioPlayback = document.getElementById('audioPlayback');
+    const statusText = document.getElementById('statusText');
+    const recordingIndicator = document.getElementById('recordingIndicator');
+
+    recordBtn.addEventListener('click', async () => {
+        try {
+            // Yêu cầu quyền truy cập Micro
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = event => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                // Gộp các phần dữ liệu âm thanh lại và tạo đường dẫn tạm thời (Blob URL)
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                // Gắn vào thẻ audio để phát lại
+                audioPlayback.src = audioUrl;
+                audioChunks = []; // Làm sạch mảng để chuẩn bị cho lần ghi âm tiếp theo
+                
+                // Dừng tất cả các track của micro để tắt đèn đỏ trên trình duyệt
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            
+            // Cập nhật giao diện
+            recordBtn.disabled = true;
+            stopBtn.disabled = false;
+            statusText.style.display = 'none';
+            recordingIndicator.style.display = 'inline';
+
+        } catch (err) {
+            console.error('Lỗi truy cập micro:', err);
+            alert('Không thể truy cập micro. Vui lòng kiểm tra quyền truy cập của trình duyệt!');
+        }
+    });
+
+    stopBtn.addEventListener('click', () => {
+        mediaRecorder.stop();
+        
+        // Cập nhật giao diện
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+        statusText.style.display = 'inline';
+        statusText.textContent = 'Đã lưu bản ghi tạm thời.';
+        recordingIndicator.style.display = 'none';
+    });
+</script>
+
+</body>
+</html>
