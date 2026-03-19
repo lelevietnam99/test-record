@@ -102,7 +102,7 @@
 <script>
     let mediaRecorder;
     let audioChunks = [];
-    let isRecording = false; // Biến kiểm tra trạng thái
+    let isRecording = false;
     let stream;
 
     const recordToggleBtn = document.getElementById('recordToggleBtn');
@@ -111,11 +111,10 @@
 
     recordToggleBtn.addEventListener('click', async () => {
         if (!isRecording) {
-            // --- BƯỚC 1: BẮT ĐẦU GHI ÂM ---
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
-                audioChunks = []; // Xóa dữ liệu cũ
+                audioChunks = [];
 
                 mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) {
@@ -128,14 +127,17 @@
                     const audioUrl = URL.createObjectURL(audioBlob);
                     audioPlayback.src = audioUrl;
                     
-                    // Tắt hẳn micro để tiết kiệm pin và tắt đèn đỏ trình duyệt
+                    // --- ĐIỂM MỚI: Tự động phát âm thanh ---
+                    audioPlayback.play().catch(e => {
+                        console.log("Trình duyệt chặn tự động phát:", e);
+                    });
+                    
                     stream.getTracks().forEach(track => track.stop());
                 };
 
                 mediaRecorder.start();
                 isRecording = true;
                 
-                // Đổi giao diện nút sang "Dừng"
                 recordToggleBtn.textContent = 'Dừng ghi âm';
                 recordToggleBtn.classList.add('recording');
                 statusText.textContent = '⏺ Đang ghi âm...';
@@ -147,14 +149,12 @@
                 alert('Không thể truy cập micro. Vui lòng kiểm tra quyền của trình duyệt!');
             }
         } else {
-            // --- BƯỚC 2: DỪNG GHI ÂM ---
             mediaRecorder.stop();
             isRecording = false;
             
-            // Trả giao diện nút về "Bắt đầu"
             recordToggleBtn.textContent = 'Bắt đầu ghi âm';
             recordToggleBtn.classList.remove('recording');
-            statusText.textContent = 'Đã lưu bản ghi. Bạn có thể nghe lại bên dưới!';
+            statusText.textContent = 'Đang phát lại bản ghi...';
             statusText.style.color = '#28a745';
             statusText.style.fontWeight = 'normal';
         }
