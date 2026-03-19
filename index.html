@@ -18,7 +18,11 @@
             height: 100vh;
             background-color: #f4f4f9;
             margin: 0;
+            /* Thêm padding dưới để nội dung không bị nút che mất */
+            padding-bottom: 100px; 
+            box-sizing: border-box;
         }
+        
         .container {
             background-color: white;
             padding: 30px;
@@ -26,60 +30,21 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             text-align: center;
             max-width: 400px;
-            width: 100%;
+            width: 90%;
         }
+        
         h2 {
             color: #333;
-            margin-bottom: 25px;
-        }
-        .controls {
+            margin-top: 0;
             margin-bottom: 20px;
         }
         
-        button {
-            padding: 12px 28px;
-            font-size: 16px;
-            font-weight: bold;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            color: white;
-            background-color: #28a745; 
-            box-shadow: 0 4px 6px rgba(40, 167, 69, 0.3);
-            transition: all 0.3s ease;
-            outline: none;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(40, 167, 69, 0.4);
-        }
-        
-        button:active {
-            transform: translateY(1px);
-        }
-
-        button.recording {
-            background-color: #dc3545;
-            box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3);
-            animation: pulse 1.5s infinite;
-        }
-        
-        button.recording:hover {
-            box-shadow: 0 6px 8px rgba(220, 53, 69, 0.4);
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.6); }
-            70% { box-shadow: 0 0 0 12px rgba(220, 53, 69, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-        }
-
         audio {
             width: 100%;
             margin-top: 20px;
             outline: none;
         }
+        
         .status {
             margin-top: 15px;
             font-size: 15px;
@@ -87,27 +52,79 @@
             height: 20px;
             transition: color 0.3s;
         }
+
+        /* --- CSS MỚI CHO NÚT GHI ÂM TRÒN VÀ NẰM DƯỚI ĐÁY --- */
+        .controls {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+        
+        button {
+            width: 110px;        /* Độ rộng của nút */
+            height: 110px;       /* Chiều cao bằng độ rộng để tạo hình vuông */
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 50%;  /* Biến hình vuông thành hình tròn */
+            cursor: pointer;
+            color: white;
+            background-color: #28a745; 
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+            transition: all 0.3s ease;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        button:hover {
+            transform: scale(1.05); /* Phóng to nhẹ khi di chuột */
+            box-shadow: 0 12px 25px rgba(40, 167, 69, 0.5);
+        }
+        
+        button:active {
+            transform: scale(0.95); /* Lõm xuống khi bấm */
+        }
+
+        button.recording {
+            background-color: #dc3545;
+            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+            animation: pulse 1.5s infinite;
+        }
+        
+        button.recording:hover {
+            box-shadow: 0 12px 25px rgba(220, 53, 69, 0.5);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.6); }
+            70% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Trạm Ghi Âm</h2>
-    <div class="controls">
-        <button id="recordToggleBtn">Bắt đầu ghi âm</button>
-    </div>
     <div class="status" id="statusText">Sẵn sàng...</div>
-    
     <audio id="audioPlayback" controls></audio>
 </div>
 
+<div class="controls">
+    <button id="recordToggleBtn">BẮT ĐẦU</button>
+</div>
+
 <script>
-    // --- ĐĂNG KÝ SERVICE WORKER CHO PWA ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js')
                 .then(registration => {
-                    console.log('ServiceWorker đăng ký thành công với scope: ', registration.scope);
+                    console.log('ServiceWorker đăng ký thành công');
                 })
                 .catch(err => {
                     console.log('ServiceWorker đăng ký thất bại: ', err);
@@ -115,7 +132,6 @@
         });
     }
 
-    // --- CODE GHI ÂM TỰ ĐỘNG PHÁT (GIỮ NGUYÊN) ---
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
@@ -153,7 +169,8 @@
                 mediaRecorder.start();
                 isRecording = true;
                 
-                recordToggleBtn.textContent = 'Dừng ghi âm';
+                // Cập nhật chữ ngắn gọn cho vừa hình tròn
+                recordToggleBtn.textContent = 'DỪNG';
                 recordToggleBtn.classList.add('recording');
                 statusText.textContent = '⏺ Đang ghi âm...';
                 statusText.style.color = '#dc3545';
@@ -167,7 +184,8 @@
             mediaRecorder.stop();
             isRecording = false;
             
-            recordToggleBtn.textContent = 'Bắt đầu ghi âm';
+            // Cập nhật chữ ngắn gọn
+            recordToggleBtn.textContent = 'BẮT ĐẦU';
             recordToggleBtn.classList.remove('recording');
             statusText.textContent = 'Đang phát lại bản ghi...';
             statusText.style.color = '#28a745';
